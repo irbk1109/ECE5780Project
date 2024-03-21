@@ -1,4 +1,4 @@
 # ECE5780Project
 Authors:
-  Isaac Kime 
+  Isaac Kime, Sam Wimmer
   
