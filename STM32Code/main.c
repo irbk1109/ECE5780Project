@@ -70,7 +70,95 @@ int main(void)
 	
 	//Setup Timer to check parking spot at certain interval 
 	
+	
+	
+	///////////////////////////////////////////
 	//Setup I2C2 
+	//PB11 to AF, open drain, and I2C2_SDA for AF
+	GPIOB -> MODER |= (1<<23);
+	GPIOB -> MODER &= ~(1<<22);
+	
+	GPIOB -> OTYPER |= (1<<11);
+	
+	GPIOB -> AFR[1] &= ~(1<<15);
+	GPIOB -> AFR[1] &= ~(1<<14);
+	GPIOB -> AFR[1] &= ~(1<<13);
+	GPIOB -> AFR[1] |= (1<<12);
+	//-------------------------------------------
+
+
+	//PB13 to AF, open drain, and I2C2_SCL for AF
+	GPIOB -> MODER |= (1<<27);
+	GPIOB -> MODER &= ~(1<<26);
+	
+	GPIOB -> OTYPER |= (1<<13);
+	
+	GPIOB -> AFR[1] &= ~(1<<23);
+	GPIOB -> AFR[1] |= (1<<22);
+	GPIOB -> AFR[1] &= ~(1<<21);
+	GPIOB -> AFR[1] |= (1<<20);
+	//------------------------------------------
+
+	//PB14 to output, push pull and initialize high
+	GPIOB -> MODER &= ~(1<<29);
+	GPIOB -> MODER |=  (1<<28);
+	
+	GPIOB -> OTYPER &= ~(1<<14);
+	
+	GPIOB->ODR |= (1<<14);
+	//-------------------------------------------	
+
+	//PC0 to output, push pull and initialize high
+	GPIOC -> MODER |= (1<<0);
+	GPIOC -> MODER &= ~(1<<1);
+	
+	GPIOC -> OTYPER &= ~(1<<0);
+	
+	GPIOC->ODR |= (1<<0);
+	//-------------------------------------------
+
+
+	//set to 100kHz
+	I2C2->TIMINGR |= 0x13;
+	I2C2->TIMINGR |= (0xF<<8);
+	I2C2->TIMINGR |= (0x2<<16);
+	I2C2->TIMINGR |= (0x4<<20);
+	I2C2->TIMINGR |= (0x1<<28);
+
+	//i2c enable
+	I2C2-> CR1 |=(1<<0);
+
+	int red = 6;
+	int blue = 7;
+	int green = 9;
+	int orange = 8;	
+	//////////////////////////////////////
+	//////////////////////////////////////
+	
+	//set slave address
+	I2C2->CR2 |= (0x3C<<1); //address of OLED
+	//set n bytes
+	I2C2->CR2 |= (1<<16); 
+	//RD WRN
+	I2C2->CR2 &=~(1<<10); 
+	//START
+	I2C2->CR2 |=(1<<13); 
+		
+	//wait for txis or nackf
+	while(1)
+	{
+		if(I2C2 -> ISR & I2C_ISR_TXIS) break;
+	}
+	
+	//address of who am i reg
+	I2C2->TXDR |= (0x0F<<0);
+	
+	//transfer complete wait
+	while(1) 
+		{
+			if(I2C2->ISR & I2C_ISR_TC) break;
+		}
+	
 	
 	//Setup Display conditions using I2C
 	
