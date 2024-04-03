@@ -99,6 +99,14 @@ int main(void)
 	TIM2->DIER |= (1 << 0);
 	NVIC_EnableIRQ(TIM2_IRQn);
 	NVIC_SetPriority(TIM2_IRQn, 2);
+
+	//Configure gate and parking pins. Gate = PB0, Parking = PB1
+	//input
+	GPIOB -> MODER &= (1<<0);
+	GPIOB -> MODER &= (1<<1);
+	GPIOB -> MODER &= (1<<2);
+	GPIOB -> MODER &= (1<<3);
+
 	
 	///////////////////////////////////////////
 	//Setup I2C2 
