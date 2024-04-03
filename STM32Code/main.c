@@ -46,6 +46,7 @@
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+void Write_Byte(char data);
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
@@ -169,7 +170,7 @@ int main(void)
 	//Delay 100 ms 
 	
 	HAL_Delay(100);
-	Write_Byte()
+	Write_Byte(0x41);
   while (1)
   {
 		//Just loop to keep checking with timer and interupt interval 
@@ -177,7 +178,7 @@ int main(void)
 }
 
 //TODO: Make Write 1 Byte to I2c
-void Write_Byte(unsigned char data)
+void Write_Byte(char data)
 {
 	//Set conditions, 1 byte, address, write, no auto end, 
 	//set 1 bytes
