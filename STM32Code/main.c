@@ -62,19 +62,44 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  HAL_Init();
+	HAL_Init();
 
-  SystemClock_Config();
+	SystemClock_Config();
 
 	//Setup Interupt on specific pin to interupt when gate is detected
+	//TODO: enable the RCC for specific GPIO 
+	RCC->APB2ENR|= RCC_APB2ENR_SYSCFGCOMPEN;
+
+	//unmask exti0 
+	EXTI->IMR  |= (1 << 0);
 	
+	//Figure out what the trigger is rising or fall edge 
+	EXTI->RTSR |= (1 << 0); 
+	
+	//configure the register, FIGURE out the pin 
+	SYSCFG->EXTICR[0] &= ~( 1<<0);
+	SYSCFG->EXTICR[0] &= ~( 1<<1);
+	SYSCFG->EXTICR[0] &= ~( 1<<2);
+	SYSCFG->EXTICR[0] &= ~( 1<<3);
+	
+	//set up interrupt and give it priority 
+	NVIC_EnableIRQ(EXTI0_1_IRQn);
+	
+	//set priority of extio
+	NVIC_SetPriority(EXTI0_1_IRQn, 1);
+
 	//Setup Timer to check parking spot at certain interval 
-	
-	
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+	TIM2->PSC = 7999;
+	TIM2->ARR = 250;
+	TIM2->DIER |= (1 << 0);
+	NVIC_EnableIRQ(TIM2_IRQn);
+	NVIC_SetPriority(TIM2_IRQn, 2);
 	
 	///////////////////////////////////////////
 	//Setup I2C2 
 	//PB11 to AF, open drain, and I2C2_SDA for AF
+	//Internal Pull up? 
 	GPIOB -> MODER |= (1<<23);
 	GPIOB -> MODER &= ~(1<<22);
 	
@@ -88,6 +113,7 @@ int main(void)
 
 
 	//PB13 to AF, open drain, and I2C2_SCL for AF
+	//Internal Pull up? 
 	GPIOB -> MODER |= (1<<27);
 	GPIOB -> MODER &= ~(1<<26);
 	
@@ -99,23 +125,6 @@ int main(void)
 	GPIOB -> AFR[1] |= (1<<20);
 	//------------------------------------------
 
-	//PB14 to output, push pull and initialize high
-	GPIOB -> MODER &= ~(1<<29);
-	GPIOB -> MODER |=  (1<<28);
-	
-	GPIOB -> OTYPER &= ~(1<<14);
-	
-	GPIOB->ODR |= (1<<14);
-	//-------------------------------------------	
-
-	//PC0 to output, push pull and initialize high
-	GPIOC -> MODER |= (1<<0);
-	GPIOC -> MODER &= ~(1<<1);
-	
-	GPIOC -> OTYPER &= ~(1<<0);
-	
-	GPIOC->ODR |= (1<<0);
-	//-------------------------------------------
 
 
 	//set to 100kHz
@@ -127,17 +136,51 @@ int main(void)
 
 	//i2c enable
 	I2C2-> CR1 |=(1<<0);
-
-	int red = 6;
-	int blue = 7;
-	int green = 9;
-	int orange = 8;	
-	//////////////////////////////////////
-	//////////////////////////////////////
 	
 	//set slave address
 	I2C2->CR2 |= (0x3C<<1); //address of OLED
-	//set n bytes
+		
+	//Setup Display conditions using I2C
+	Write_Byte(0xAE);    /*display off*/    
+	Write_Byte(0x00);    /*set lower column addres*/
+	Write_Byte(0x00);    /*set display start line*/               
+	Write_Byte(0xB0);    /*set page address*/
+	Write_Byte(0x81);    /*contract control*/        
+	Write_Byte(0xCF);    /*128*/ 
+	Write_Byte(0xA1);    /*set segment remap*/              
+	Write_Byte(0xA6);    /*normal / reverse*/                
+	Write_Byte(0xA8);    /*multiplex ratio*/       
+	Write_Byte(0x1F);    /*duty = 1/32*/               
+	Write_Byte(0xC8);    /*Com scan direction*/            
+	Write_Byte(0xD3);    /*set display offset*/      
+	Write_Byte(0x00);              
+	Write_Byte(0xD5);    /*set osc division*/      
+	Write_Byte(0x80);               
+	Write_Byte(0xD9);    /*set pre-charge period*/       
+	Write_Byte(0x1f);            
+	Write_Byte(0xDA);    /*set COM pins*/      
+	Write_Byte(0x00);               
+	Write_Byte(0xdb);    /*set vcomh*/      
+	Write_Byte(0x40);            
+	Write_Byte(0x8d);    /*set charge pump enable*/      
+	Write_Byte(0x10);               
+	Write_Byte(0xAF);    /*display ON*/
+	
+	//Delay 100 ms 
+	
+	HAL_Delay(100);
+	Write_Byte()
+  while (1)
+  {
+		//Just loop to keep checking with timer and interupt interval 
+  }
+}
+
+//TODO: Make Write 1 Byte to I2c
+void Write_Byte(unsigned char data)
+{
+	//Set conditions, 1 byte, address, write, no auto end, 
+	//set 1 bytes
 	I2C2->CR2 |= (1<<16); 
 	//RD WRN
 	I2C2->CR2 &=~(1<<10); 
@@ -151,7 +194,7 @@ int main(void)
 	}
 	
 	//address of who am i reg
-	I2C2->TXDR |= (0x0F<<0);
+	I2C2->TXDR |= (data<<0);
 	
 	//transfer complete wait
 	while(1) 
@@ -159,52 +202,25 @@ int main(void)
 			if(I2C2->ISR & I2C_ISR_TC) break;
 		}
 	
-	
-	//Setup Display conditions using I2C
-	
-	//write_i(0xAE);    /*display off*/    
-	//write_i(0x00);    /*set lower column address*
-	//write_i(0x00);    /*set display start line*/               
-	//write_i(0xB0);    /*set page address*/
-	//write_i(0x81);    /*contract control*/        
-	//write_i(0xCF);    /*128*/ 
-	//write_i(0xA1);    /*set segment remap*/              
-	//write_i(0xA6);    /*normal / reverse*/                
-	//write_i(0xA8);    /*multiplex ratio*/       
-	//write_i(0x1F);    /*duty = 1/32*/               
-	//write_i(0xC8);    /*Com scan direction*/            
-	//write_i(0xD3);    /*set display offset*/      
-	//write_i(0x00);              
-	//write_i(0xD5);    /*set osc division*/      
-	//write_i(0x80);               
-	//write_i(0xD9);    /*set pre-charge period*/       
-	//write_i(0x1f);            
-	//write_i(0xDA);    /*set COM pins*/      
-	//write_i(0x00);               
-	//write_i(0xdb);    /*set vcomh*/      
-	//write_i(0x40);            
-	//write_i(0x8d);    /*set charge pump enable*/      
-	//write_i(0x10);               
-	//write_i(0xAF);    /*display ON*/
-	
-	//Delay 100 ms 
-	
-  while (1)
-  {
-		//Just loop to keep checking with timer and interupt interval 
-  }
+	//Stop
+	I2C2->CR2 |= (1 << 14);
 }
-
-//TODO: Make Write 1 Byte to I2c
-void Write_Byte(unsigned char addr, unsigned char data)
+void TIM2_IRQHandler(void)
 {
-	//Set conditions, 1 byte, address, write, no auto end, 
-	
-	//Do transmission
-	
-	//
-}
+	//Check the pin of the Parking spot 
 
+	//WRite to oled if detected 
+
+}
+void EXTI0_1_IRQHandler(void)
+{
+	//Check the pin of the Gate Detection
+
+	//write to OLED if detected 
+	
+	//Finish the interupt
+	EXTI->PR |= (1 << 0);
+}
 /**
   * @brief System Clock Configuration
   * @retval None
