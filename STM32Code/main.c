@@ -68,8 +68,11 @@ int main(void)
 	SystemClock_Config();
 
 	//Setup Interupt on specific pin to interupt when gate is detected
+	
 	//TODO: enable the RCC for specific GPIO 
 	RCC->APB2ENR|= RCC_APB2ENR_SYSCFGCOMPEN;
+	RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
 
 	//unmask exti0 
 	EXTI->IMR  |= (1 << 0);
@@ -194,7 +197,6 @@ void Write_Byte(char data)
 		if(I2C2 -> ISR & I2C_ISR_TXIS) break;
 	}
 	
-	//address of who am i reg
 	I2C2->TXDR |= (data<<0);
 	
 	//transfer complete wait
