@@ -56,6 +56,12 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+	
+	int red = 6;
+	int green = 9;
+	int blue = 7;
+	int orange = 8;
+
 
 /**
   * @brief  The application entry point.
@@ -73,6 +79,7 @@ int main(void)
 	RCC->APB2ENR|= RCC_APB2ENR_SYSCFGCOMPEN;
 	RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
 	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
+	RCC->AHBENR   |= RCC_AHBENR_GPIOCEN;
 
 	//unmask exti0 
 	EXTI->IMR  |= (1 << 0);
@@ -91,6 +98,48 @@ int main(void)
 	
 	//set priority of extio
 	NVIC_SetPriority(EXTI0_1_IRQn, 1);
+
+	/////////LED/////////////////////////////////////////
+	//set pins to general purpose output mode in the moder register
+	GPIOC->MODER |= (1<<14) | (1<<12);
+	GPIOC->MODER &= ~(1<<15);
+	GPIOC->MODER &= ~(1<<13);
+	GPIOC->MODER |= (1<<18) | (1<<16);
+	GPIOC->MODER &= ~(1<<19);
+	GPIOC->MODER &= ~(1<<17);
+	
+	//set to push pull output in OTYPER reg
+	GPIOC->OTYPER &= ~(1<<12);
+	GPIOC->OTYPER &= ~(1<<13);
+	GPIOC->OTYPER &= ~(1<<14);
+	GPIOC->OTYPER &= ~(1<<15);
+	GPIOC->OTYPER &= ~(1<<8);
+	GPIOC->OTYPER &= ~(1<<9);
+	
+	//set pins low speed in OSPEEDR reg
+	GPIOC->OSPEEDR &= ~(1<<12);
+	GPIOC->OSPEEDR &= ~(1<<14);
+	GPIOC->OSPEEDR &= ~(1<<18);
+	GPIOC->OSPEEDR &= ~(1<<16);
+
+	//set to no pullup/down resistors in PUPDR reg
+	GPIOC->PUPDR &= ~(1<<12);
+	GPIOC->PUPDR &= ~(1<<13);
+	GPIOC->PUPDR &= ~(1<<14);
+	GPIOC->PUPDR &= ~(1<<15);
+	GPIOC->PUPDR &= ~(1<<16);
+	GPIOC->PUPDR &= ~(1<<17);
+	GPIOC->PUPDR &= ~(1<<18);
+	GPIOC->PUPDR &= ~(1<<19);
+	
+	//One high and one low
+	GPIOC->ODR &= ~(1<<6);
+	GPIOC->ODR &= ~(1<<7);
+	GPIOC->ODR &= ~(1<<8);
+	GPIOC->ODR &= ~(1<<9);
+	////////////////////////////////////////////////////
+
+
 
 	//Setup Timer to check parking spot at certain interval 
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
@@ -218,8 +267,35 @@ void Write_Byte(char data)
 }
 void TIM2_IRQHandler(void)
 {
-	//Check the pin of the Parking spot 
+	//Check the pin of the Parking spot
 
+	//if PB0
+	if((GPIOB->IDR & 0x00000001) != 0)
+	{
+		//green
+		GPIOC->ODR |= (1<<green);
+		GPIOC->ODR &= ~(1<<red);
+	}
+	else
+	{
+		//red
+		GPIOC->ODR |= (1<<red);
+		GPIOC->ODR &= ~(1<<green);
+	}
+
+	//if PB1
+	if((GPIOB->IDR & 0x00000002) != 0)
+	{
+		//blue
+		GPIOC->ODR |= (1<<blue);
+		GPIOC->ODR &= ~(1<<orange);
+	}
+	else
+	{
+		//orange
+		GPIOC->ODR |= (1<<orange);
+		GPIOC->ODR &= ~(1<<blue);
+	}
 	//WRite to oled if detected 
 
 }
