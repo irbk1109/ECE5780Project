@@ -56,6 +56,9 @@ static void MX_I2C1_Init(void);
 	int green = 9;
 	int blue = 7;
 	int orange = 8;
+	int gateStatus;
+	int parkingStatus;
+	int ticks;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -185,26 +188,28 @@ int main(void)
 	ssd1306_Fill(White);
 	ssd1306_UpdateScreen();
   /* USER CODE END 2 */
-	ssd1306_SetCursor(5,5);
-	char myText[] = "Hello World!";
-	ssd1306_WriteString(myText, Font_6x8, Black);
-	ssd1306_UpdateScreen();
-	
-	ssd1306_SetCursor(5,13);
-	ssd1306_WriteString(myText, Font_6x8, Black);
-	ssd1306_UpdateScreen();
-	ssd1306_SetCursor(5,21);
-	ssd1306_WriteString(myText, Font_6x8, Black);
-	ssd1306_UpdateScreen();
-	ssd1306_DrawCircle(96, 16, 4,Black);
-	ssd1306_UpdateScreen();
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-		//check status of flags and output correctly 
 		
+		ssd1306_Fill(White);
+		ssd1306_UpdateScreen();
+		if(ticks >= 4)
+		{
+			gateStatus = 0;
+		}
+		//update screen based on gateStatus 
+			ssd1306_SetCursor(5,5);
+		char myText[] = "Park: Filled";
+		char myText2[] = "Park: Empty";
+		if(parkingStatus == 1)
+			ssd1306_WriteString(myText, Font_6x8, Black);
+		else
+			ssd1306_WriteString(myText2, Font_6x8, Black);
+		ssd1306_UpdateScreen();
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -253,44 +258,26 @@ void SystemClock_Config(void)
 }
 void TIM2_IRQHandler(void)
 {
-	//Check the pin of the Parking spot
-
-	//if PB4
-	if((GPIOB->IDR & 0x0010) != 0)
-	{
-		//green
-		GPIOC->ODR |= (1<<green);
-		GPIOC->ODR &= ~(1<<red);
-	}
-	else
-	{
-		//red
-		GPIOC->ODR |= (1<<red);
-		GPIOC->ODR &= ~(1<<green);
-	}
 
 	//if PB5
 	if((GPIOB->IDR & 0x0020) != 0)
 	{
-		//blue
-		GPIOC->ODR |= (1<<blue);
-		GPIOC->ODR &= ~(1<<orange);
+		parkingStatus = 1;
 	}
 	else
 	{
-		//orange
-		GPIOC->ODR |= (1<<orange);
-		GPIOC->ODR &= ~(1<<blue);
+		
+		parkingStatus = 0;
 	}
 	//WRite to oled if detected 
-
+	ticks++;
 	TIM2 -> SR &= ~(1<<0);
 }
 void EXTI0_1_IRQHandler(void)
 {
-	//Check the pin of the Gate Detection
-
-	//write to OLED if detected 
+	//interupt is trigged, so gate is detected 
+	gateStatus = 1;
+	ticks = 0;
 	
 	//Finish the interupt
 	EXTI->PR |= (1 << 0);
