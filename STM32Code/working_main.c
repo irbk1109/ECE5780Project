@@ -79,23 +79,24 @@ int main(void)
 	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
 	RCC->AHBENR   |= RCC_AHBENR_GPIOCEN;
 
-	//unmask exti0 
-	EXTI->IMR  |= (1 << 0);
+	//unmask exti4 
+	EXTI->IMR  |= (1 << 4);
 	
 	//Figure out what the trigger is rising or fall edge 
-	EXTI->RTSR |= (1 << 0); 
+	EXTI->RTSR |= (1 << 4); 
+	EXTI->FTSR |= (1 << 4); 
 	
-	//configure the register, FIGURE out the pin 
-	SYSCFG->EXTICR[0] &= ~( 1<<0);
-	SYSCFG->EXTICR[0] &= ~( 1<<1);
-	SYSCFG->EXTICR[0] &= ~( 1<<2);
-	SYSCFG->EXTICR[0] &= ~( 1<<3);
+	//configure exti4 to go to pb4
+	SYSCFG->EXTICR[1] |=  ( 1<<0);
+	SYSCFG->EXTICR[1] &= ~( 1<<1);
+	SYSCFG->EXTICR[1] &= ~( 1<<2);
+	SYSCFG->EXTICR[1] &= ~( 1<<3);
 	
 	//set up interrupt and give it priority 
-	NVIC_EnableIRQ(EXTI0_1_IRQn);
+	NVIC_EnableIRQ(EXTI4_1_IRQn);
 	
 	//set priority of extio
-	NVIC_SetPriority(EXTI0_1_IRQn, 1);
+	NVIC_SetPriority(EXTI4_1_IRQn, 1);
 
 	/////////LED/////////////////////////////////////////
 	//set pins to general purpose output mode in the moder register
@@ -148,7 +149,7 @@ int main(void)
 	NVIC_SetPriority(TIM2_IRQn, 2);
 	
 
-	//Configure gate and parking pins. Gate = PB0, Parking = PB1
+	//Configure gate and parking pins. Gate = PB4, Parking = PB5
 	//input
 	GPIOB -> MODER &= ~(1<<8);
 	GPIOB -> MODER &= ~(1<<9);
@@ -159,7 +160,6 @@ int main(void)
 	///////////////////////////////////////////
 	//Setup I2C2 
 	//PB11 to AF, open drain, and I2C2_SDA for AF
-	//Internal Pull up? 
 	GPIOB -> MODER |= (1<<23);
 	GPIOB -> MODER &= ~(1<<22);
 	
@@ -173,7 +173,6 @@ int main(void)
 
 
 	//PB13 to AF, open drain, and I2C2_SCL for AF
-	//Internal Pull up? 
 	GPIOB -> MODER |= (1<<27);
 	GPIOB -> MODER &= ~(1<<26);
 	
@@ -239,7 +238,7 @@ void TIM2_IRQHandler(void)
 {
 	//Check the pin of the Parking spot
 
-	//if PB0
+	//if PB4
 	if((GPIOB->IDR & 0x0010) != 0)
 	{
 		//green
@@ -253,7 +252,7 @@ void TIM2_IRQHandler(void)
 		GPIOC->ODR &= ~(1<<green);
 	}
 
-	//if PB1
+	//if PB5
 	if((GPIOB->IDR & 0x0020) != 0)
 	{
 		//blue
