@@ -196,22 +196,35 @@ int main(void)
 			gateStatus = 0;
 		}
 		//update screen based on gateStatus 
-		ssd1306_SetCursor(5,5);
-		char myText[] = "Park: Filled";
+		char myText[] = "Park: Taken";
 		char myText2[] = "Park: Empty";
-		if(parkingStatus == 1)
-			ssd1306_WriteString(myText, Font_6x8, Black);
-		else
-			ssd1306_WriteString(myText2, Font_6x8, Black);
 		
-		char myText3[] = "Gate: Filled";
-		char myText4[] = "Gate: Empty";
-		ssd1306_SetCursor(5,15);
-		if(gateStatus == 1)
-			ssd1306_WriteString(myText3, Font_6x8, Black);
+		ssd1306_Fill(White);
+		ssd1306_SetCursor(20,5);
+		if(parkingStatus == 1)
+		{
+			ssd1306_FillCircle(7,7,5,Black);
+			ssd1306_WriteString(myText, Font_6x8, Black);
+		}
 		else
+		{
+			ssd1306_DrawCircle(7,7,5,Black);
+			ssd1306_WriteString(myText2, Font_6x8, Black);
+		}
+		
+		char myText3[] = "Gate: Detected";
+		char myText4[] = "Gate: Empty";
+		ssd1306_SetCursor(20,17);
+		if(gateStatus == 1)
+		{
+			ssd1306_FillCircle(7,20,5,Black);
+			ssd1306_WriteString(myText3, Font_6x8, Black);
+		}
+		else
+		{
+			ssd1306_DrawCircle(7,20,5,Black);
 			ssd1306_WriteString(myText4, Font_6x8, Black);
- 
+		}
 		if(timer == 1)
 		{
 			ssd1306_UpdateScreen();
