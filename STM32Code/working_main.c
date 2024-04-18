@@ -183,6 +183,8 @@ int main(void)
 	ssd1306_Init();
 	ssd1306_Fill(White);
 	ssd1306_UpdateScreen();
+	gateStatus = 0;
+	parkingStatus = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
