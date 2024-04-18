@@ -59,6 +59,7 @@ static void MX_I2C1_Init(void);
 	int gateStatus;
 	int parkingStatus;
 	int ticks;
+	int timer;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,15 +114,10 @@ int main(void)
 	EXTI->IMR  |= (1 << 4);
 	
 	//Figure out what the trigger is rising or fall edge 
-	EXTI->RTSR |= (1 << 4); 
 	EXTI->FTSR |= (1 << 4); 
 	
 	//configure exti4 to go to pb4
-	SYSCFG->EXTICR[1] |=  ( 1<<0);
-	SYSCFG->EXTICR[1] &= ~( 1<<1);
-	SYSCFG->EXTICR[1] &= ~( 1<<2);
-	SYSCFG->EXTICR[1] &= ~( 1<<3);
-	
+	SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI4_PB;
 	//set up interrupt and give it priority 
 	NVIC_EnableIRQ(EXTI4_15_IRQn);
 	
@@ -193,23 +189,33 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		
-		ssd1306_Fill(White);
-		ssd1306_UpdateScreen();
 		if(ticks >= 4)
 		{
 			gateStatus = 0;
 		}
 		//update screen based on gateStatus 
-			ssd1306_SetCursor(5,5);
+		ssd1306_SetCursor(5,5);
 		char myText[] = "Park: Filled";
 		char myText2[] = "Park: Empty";
 		if(parkingStatus == 1)
 			ssd1306_WriteString(myText, Font_6x8, Black);
 		else
 			ssd1306_WriteString(myText2, Font_6x8, Black);
-		ssd1306_UpdateScreen();
-
+		
+		char myText3[] = "Gate: Filled";
+		char myText4[] = "Gate: Empty";
+		ssd1306_SetCursor(5,15);
+		if(gateStatus == 1)
+			ssd1306_WriteString(myText3, Font_6x8, Black);
+		else
+			ssd1306_WriteString(myText4, Font_6x8, Black);
+ 
+		if(timer == 1)
+		{
+			ssd1306_UpdateScreen();
+			timer = 0;
+			GPIOC->ODR &= ~( 1 << red);
+		}
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -271,14 +277,15 @@ void TIM2_IRQHandler(void)
 	}
 	//WRite to oled if detected 
 	ticks++;
+	timer = 1;
 	TIM2 -> SR &= ~(1<<0);
 }
-void EXTI0_1_IRQHandler(void)
+void EXTI4_15_IRQHandler(void)
 {
 	//interupt is trigged, so gate is detected 
 	gateStatus = 1;
 	ticks = 0;
-	
+	GPIOC->ODR |= ( 1 << red);
 	//Finish the interupt
 	EXTI->PR |= (1 << 0);
 }
