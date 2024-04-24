@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include "ssd1306.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -40,28 +40,32 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-void Write_Byte(char data);
 void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-
+	
+	int red = 6;
+	int green = 9;
+	int blue = 7;
+	int orange = 8;
+	int gateStatus;
+	int parkingStatus;
+	int ticks;
+	int timer;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
-	
-	int red = 6;
-	int green = 9;
-	int blue = 7;
-	int orange = 8;
-
 
 /**
   * @brief  The application entry point.
@@ -69,35 +73,56 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_I2C1_Init();
+  /* USER CODE BEGIN 2 */
+	
 	HAL_Init();
 
 	SystemClock_Config();
 
 	//Setup Interupt on specific pin to interupt when gate is detected
 	
-	//TODO: enable the RCC for specific GPIO 
+	//enable the RCC for specific GPIO 
 	RCC->APB2ENR|= RCC_APB2ENR_SYSCFGCOMPEN;
 	RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
 	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
 	RCC->AHBENR   |= RCC_AHBENR_GPIOCEN;
 
-	//unmask exti0 
-	EXTI->IMR  |= (1 << 0);
+	//unmask exti4 
+	EXTI->IMR  |= (1 << 4);
 	
 	//Figure out what the trigger is rising or fall edge 
-	EXTI->RTSR |= (1 << 0); 
+	EXTI->FTSR |= (1 << 4); 
 	
-	//configure the register, FIGURE out the pin 
-	SYSCFG->EXTICR[0] &= ~( 1<<0);
-	SYSCFG->EXTICR[0] &= ~( 1<<1);
-	SYSCFG->EXTICR[0] &= ~( 1<<2);
-	SYSCFG->EXTICR[0] &= ~( 1<<3);
-	
+	//configure exti4 to go to pb4
+	SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI4_PB;
 	//set up interrupt and give it priority 
-	NVIC_EnableIRQ(EXTI0_1_IRQn);
+	NVIC_EnableIRQ(EXTI4_15_IRQn);
 	
 	//set priority of extio
-	NVIC_SetPriority(EXTI0_1_IRQn, 1);
+	NVIC_SetPriority(EXTI4_15_IRQn, 1);
 
 	/////////LED/////////////////////////////////////////
 	//set pins to general purpose output mode in the moder register
@@ -132,11 +157,6 @@ int main(void)
 	GPIOC->PUPDR &= ~(1<<18);
 	GPIOC->PUPDR &= ~(1<<19);
 	
-	//One high and one low
-	GPIOC->ODR &= ~(1<<6);
-	GPIOC->ODR &= ~(1<<7);
-	GPIOC->ODR &= ~(1<<8);
-	GPIOC->ODR &= ~(1<<9);
 	////////////////////////////////////////////////////
 
 
@@ -148,166 +168,83 @@ int main(void)
 	TIM2->DIER |= (1 << 0);
 	NVIC_EnableIRQ(TIM2_IRQn);
 	NVIC_SetPriority(TIM2_IRQn, 2);
+	
 
-	//Configure gate and parking pins. Gate = PB0, Parking = PB1
+	//Configure gate and parking pins. Gate = PB4, Parking = PB5
 	//input
-	GPIOB -> MODER &= (1<<0);
-	GPIOB -> MODER &= (1<<1);
-	GPIOB -> MODER &= (1<<2);
-	GPIOB -> MODER &= (1<<3);
+	GPIOB -> MODER &= ~(1<<8);
+	GPIOB -> MODER &= ~(1<<9);
+	GPIOB -> MODER &= ~(1<<10);
+	GPIOB -> MODER &= ~(1<<11);
+	
+	//start timer
+	TIM2->CR1 |= TIM_CR1_CEN;
 
-	
-	///////////////////////////////////////////
-	//Setup I2C2 
-	//PB11 to AF, open drain, and I2C2_SDA for AF
-	//Internal Pull up? 
-	GPIOB -> MODER |= (1<<23);
-	GPIOB -> MODER &= ~(1<<22);
-	
-	GPIOB -> OTYPER |= (1<<11);
-	
-	GPIOB -> AFR[1] &= ~(1<<15);
-	GPIOB -> AFR[1] &= ~(1<<14);
-	GPIOB -> AFR[1] &= ~(1<<13);
-	GPIOB -> AFR[1] |= (1<<12);
-	//-------------------------------------------
+	//initalize screen and fill it with white
+	ssd1306_Init();
+	ssd1306_Fill(White);
+	ssd1306_UpdateScreen();
 
+	//set inital conditions
+	gateStatus = 0;
+	parkingStatus = 0;
+  /* USER CODE END 2 */
 
-	//PB13 to AF, open drain, and I2C2_SCL for AF
-	//Internal Pull up? 
-	GPIOB -> MODER |= (1<<27);
-	GPIOB -> MODER &= ~(1<<26);
-	
-	GPIOB -> OTYPER |= (1<<13);
-	
-	GPIOB -> AFR[1] &= ~(1<<23);
-	GPIOB -> AFR[1] |= (1<<22);
-	GPIOB -> AFR[1] &= ~(1<<21);
-	GPIOB -> AFR[1] |= (1<<20);
-	//------------------------------------------
-
-
-
-	//set to 100kHz
-	I2C2->TIMINGR |= 0x13;
-	I2C2->TIMINGR |= (0xF<<8);
-	I2C2->TIMINGR |= (0x2<<16);
-	I2C2->TIMINGR |= (0x4<<20);
-	I2C2->TIMINGR |= (0x1<<28);
-
-	//i2c enable
-	I2C2-> CR1 |=(1<<0);
-	
-	//set slave address
-	I2C2->CR2 |= (0x3C<<1); //address of OLED
-		
-	//Setup Display conditions using I2C
-	Write_Byte(0xAE);    /*display off*/    
-	Write_Byte(0x00);    /*set lower column addres*/
-	Write_Byte(0x00);    /*set display start line*/               
-	Write_Byte(0xB0);    /*set page address*/
-	Write_Byte(0x81);    /*contract control*/        
-	Write_Byte(0xCF);    /*128*/ 
-	Write_Byte(0xA1);    /*set segment remap*/              
-	Write_Byte(0xA6);    /*normal / reverse*/                
-	Write_Byte(0xA8);    /*multiplex ratio*/       
-	Write_Byte(0x1F);    /*duty = 1/32*/               
-	Write_Byte(0xC8);    /*Com scan direction*/            
-	Write_Byte(0xD3);    /*set display offset*/      
-	Write_Byte(0x00);              
-	Write_Byte(0xD5);    /*set osc division*/      
-	Write_Byte(0x80);               
-	Write_Byte(0xD9);    /*set pre-charge period*/       
-	Write_Byte(0x1f);            
-	Write_Byte(0xDA);    /*set COM pins*/      
-	Write_Byte(0x00);               
-	Write_Byte(0xdb);    /*set vcomh*/      
-	Write_Byte(0x40);            
-	Write_Byte(0x8d);    /*set charge pump enable*/      
-	Write_Byte(0x10);               
-	Write_Byte(0xAF);    /*display ON*/
-	
-	//Delay 100 ms 
-	
-	HAL_Delay(100);
-	Write_Byte(0x41);
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
-		//Just loop to keep checking with timer and interupt interval 
-  }
-}
-
-//TODO: Make Write 1 Byte to I2c
-void Write_Byte(char data)
-{
-	//Set conditions, 1 byte, address, write, no auto end, 
-	//set 1 bytes
-	I2C2->CR2 |= (1<<16); 
-	//RD WRN
-	I2C2->CR2 &=~(1<<10); 
-	//START
-	I2C2->CR2 |=(1<<13); 
-		
-	//wait for txis or nackf
-	while(1)
-	{
-		if(I2C2 -> ISR & I2C_ISR_TXIS) break;
-	}
-	
-	I2C2->TXDR |= (data<<0);
-	
-	//transfer complete wait
-	while(1) 
+		if(ticks >= 4)
 		{
-			if(I2C2->ISR & I2C_ISR_TC) break;
+			gateStatus = 0;
 		}
-	
-	//Stop
-	I2C2->CR2 |= (1 << 14);
+		//update screen based on gateStatus 
+		char myText[] = "Park: Taken";
+		char myText2[] = "Park: Empty";
+		//Make it all white
+		ssd1306_Fill(White);
+		ssd1306_SetCursor(20,5);
+
+		//Write according to parking status
+		if(parkingStatus == 1)
+		{
+			ssd1306_FillCircle(7,7,5,Black);
+			ssd1306_WriteString(myText, Font_6x8, Black);
+		}
+		else
+		{
+			ssd1306_DrawCircle(7,7,5,Black);
+			ssd1306_WriteString(myText2, Font_6x8, Black);
+		}
+		
+		char myText3[] = "Gate: Detected";
+		char myText4[] = "Gate: Empty";
+		ssd1306_SetCursor(20,17);
+
+		//Write according to gate status 
+		if(gateStatus == 1)
+		{
+			ssd1306_FillCircle(7,20,5,Black);
+			ssd1306_WriteString(myText3, Font_6x8, Black);
+		}
+		else
+		{
+			ssd1306_DrawCircle(7,20,5,Black);
+			ssd1306_WriteString(myText4, Font_6x8, Black);
+		}
+
+
+		//Update ever 0.25 seconds based on the timer 
+		if(timer == 1)
+		{
+			ssd1306_UpdateScreen();
+			timer = 0;
+		}
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
 }
-void TIM2_IRQHandler(void)
-{
-	//Check the pin of the Parking spot
 
-	//if PB0
-	if((GPIOB->IDR & 0x00000001) != 0)
-	{
-		//green
-		GPIOC->ODR |= (1<<green);
-		GPIOC->ODR &= ~(1<<red);
-	}
-	else
-	{
-		//red
-		GPIOC->ODR |= (1<<red);
-		GPIOC->ODR &= ~(1<<green);
-	}
-
-	//if PB1
-	if((GPIOB->IDR & 0x00000002) != 0)
-	{
-		//blue
-		GPIOC->ODR |= (1<<blue);
-		GPIOC->ODR &= ~(1<<orange);
-	}
-	else
-	{
-		//orange
-		GPIOC->ODR |= (1<<orange);
-		GPIOC->ODR &= ~(1<<blue);
-	}
-	//WRite to oled if detected 
-
-}
-void EXTI0_1_IRQHandler(void)
-{
-	//Check the pin of the Gate Detection
-
-	//write to OLED if detected 
-	
-	//Finish the interupt
-	EXTI->PR |= (1 << 0);
-}
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -316,6 +253,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -341,6 +279,106 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2C1;
+  PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+void TIM2_IRQHandler(void)
+{
+
+	//if PB5 is taken 
+	if((GPIOB->IDR & 0x0020) != 0)
+	{
+		parkingStatus = 0;
+	}
+	else
+	{
+		
+		parkingStatus = 1;
+	}
+	//increment ticks 
+	ticks++;
+	//set timer to 1 
+	timer = 1;
+	//send signal saying interupt is over 
+	TIM2 -> SR &= ~(1<<0);
+}
+void EXTI4_15_IRQHandler(void)
+{
+	//interupt is trigged, so gate is detected 
+	gateStatus = 1;
+
+	//reset ticks 
+	ticks = 0;
+	//Finish the interupt
+	EXTI->PR |= (1 << 0);
+}
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.Timing = 0x2000090E;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
