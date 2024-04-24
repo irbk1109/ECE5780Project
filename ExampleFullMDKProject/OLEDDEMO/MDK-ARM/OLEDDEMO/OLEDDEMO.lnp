@@ -1,0 +1,27 @@
+--cpu Cortex-M0
+"oleddemo\startup_stm32f072xb.o"
+"oleddemo\main.o"
+"oleddemo\stm32f0xx_it.o"
+"oleddemo\stm32f0xx_hal_msp.o"
+"oleddemo\stm32f0xx_hal_i2c.o"
+"oleddemo\stm32f0xx_hal_i2c_ex.o"
+"oleddemo\stm32f0xx_hal_rcc.o"
+"oleddemo\stm32f0xx_hal_rcc_ex.o"
+"oleddemo\stm32f0xx_hal.o"
+"oleddemo\stm32f0xx_hal_gpio.o"
+"oleddemo\stm32f0xx_hal_dma.o"
+"oleddemo\stm32f0xx_hal_cortex.o"
+"oleddemo\stm32f0xx_hal_pwr.o"
+"oleddemo\stm32f0xx_hal_pwr_ex.o"
+"oleddemo\stm32f0xx_hal_flash.o"
+"oleddemo\stm32f0xx_hal_flash_ex.o"
+"oleddemo\stm32f0xx_hal_exti.o"
+"oleddemo\stm32f0xx_hal_tim.o"
+"oleddemo\stm32f0xx_hal_tim_ex.o"
+"oleddemo\system_stm32f0xx.o"
+"oleddemo\ssd1306.o"
+"oleddemo\ssd1306_fonts.o"
+--strict --scatter "OLEDDEMO\OLEDDEMO.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "OLEDDEMO.map" -o OLEDDEMO\OLEDDEMO.axf
