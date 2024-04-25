@@ -3,12 +3,14 @@ Authors:
   Isaac Kime, Sam Wimmer, Sean Koo, Subin Kim
   
 Purpose:
-  This embedded system is to achieve an automatic garage parking system that indicates if the car is parked or at the gate.
+  This embedded system is to achieve an automatic garage parking system that indicates if the car is parked or at the gate. The documentation folder above contains all pictures of schematics and wire diagrams. 
 
 Functionality:
   1. The IR sensor detects if the car is parked or at the gate
   2. STM32 microcontroller takes IR sensor value as an ADC interrupt.
-  3. Whenever the status changes, the OLED screen is updated to indicate its status. 
+  3. Whenever the status changes, the OLED screen is updated to indicate its status.
+
+  Note: The PCB has additional features for our senior project, but we can use the wiring in the documentation file for our 5780 project. 
   
   
 Basic Setup Instructions:
