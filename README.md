@@ -3,6 +3,7 @@ Authors:
   Isaac Kime, Sam Wimmer, Sean Koo, Subin Kim
   
 Purpose:
+
 This embedded system is to achieve an automatic garage parking system that indicates if the car is parked or at the gate.
 
 Functionality:
